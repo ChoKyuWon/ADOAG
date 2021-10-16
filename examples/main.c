@@ -10,7 +10,14 @@ void second_gate(int x, int y){
         return;
 }
 
-void (*init_func_table[16])(int, int) = {second_gate, 0};
+void second_gate_dup(int x, int y){
+    if( x + y != 0)
+        un_init_func_table[x](y);
+    else
+        return;
+}
+
+void (*init_func_table[16])(int, int) = {second_gate, second_gate_dup, 0};
 
 void target(int x){
     printf("Target!\n");
@@ -41,12 +48,12 @@ void third_gate(int x){
 int vuln(){
     // vuln_ptr is attacker controlled value, but because of CFI, it can only call the origin_flow and first_gate
     int (*vuln_ptr)(void (*)(int, int), int) = origin_flow;
-    printf("first gate is %llx, second gate is %llx\n", first_gate, second_gate);
-    scanf("%llx", &vuln_ptr);
+    printf("first gate is %p, second gate is %p\n", first_gate, second_gate);
+    scanf("%p", &vuln_ptr);
 
     // Attacker can also control the args!
     void (*arg_func)(int,int) = 0;
-    scanf("%llx", &arg_func);
+    scanf("%p", &arg_func);
     int arg_num = 0;
     scanf("%d", &arg_num);
 
@@ -61,5 +68,6 @@ int init_table_on_runtime(){
 
 int main(){
     init_table_on_runtime();
+    second_gate_dup(0,0);
     return vuln();
 }
