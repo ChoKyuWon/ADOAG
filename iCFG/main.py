@@ -58,16 +58,12 @@ def main():
                     break
                 jump_table_targets.append(k.op_find(X86_OP_IMM, 1).imm)
             indirects.append([call.address, jump_table_targets])
-    print(indirects)
-
-"""
-['_CsInsn__gen_detail', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', 
-'__format__', '__ge__', '__getattr__', '__getattribute__', '__gt__', '__hash__', '__init__', 
-'__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', 
-'__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_cs', '_raw', 
-'address', 'bytes', 'errno', 'group', 'group_name', 'groups', 'id', 'insn_name', 'mnemonic', 'op_count', 
-'op_find', 'op_str', 'reg_name', 'reg_read', 'reg_write', 'regs_access', 'regs_read', 'regs_write', 'size']
-"""
+    
+    for i in indirects:
+        print(hex(i[0]), '-> ', end="")
+        for j in i[1]:
+            print(hex(j), end=", ")
+        print()
 
 if __name__ == "__main__":
     main()
