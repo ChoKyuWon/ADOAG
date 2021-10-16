@@ -8,9 +8,6 @@ base_addr = 0x100000 # To match addresses to Ghidra
 
 proj = angr.Project("./main.o", main_opts={'base_addr': base_addr}) 
 
-flag_chars = [claripy.BVS('flag_%d' % i, 8) for i in range(FLAG_LEN)]
-flag = claripy.Concat(*flag_chars)
-
 obj = proj.loader.main_object
 main = proj.loader.find_symbol('main').rebased_addr
 
