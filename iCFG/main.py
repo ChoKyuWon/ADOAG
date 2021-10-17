@@ -6,13 +6,10 @@ from capstone.x86 import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 
-def indirect_list(assembly, disassembler, section, offset):
+def indirect_list(assembly, disassembler, section, base):
     indirects= []
     for index, insn in enumerate(assembly):
         if insn.mnemonic == 'ud2':
-            cmp = None
-            lea = None
-            lea_next = None
             call = None
 
             jump_table_len = 0 
@@ -28,19 +25,25 @@ def indirect_list(assembly, disassembler, section, offset):
                     if target.op_count(X86_OP_IMM) != 0 :
                         op = target.op_find(X86_OP_IMM, 1)
                         jump_table_len = op.imm
+
                 if target.mnemonic == 'lea':
-                    lea = target
-                    disp = lea.op_find(X86_OP_MEM, 1).mem.disp
+                    disp = target.op_find(X86_OP_MEM, 1).mem.disp
                     rip = assembly[index - _index].address
                     jump_table_addr = rip + disp
                     break
 
+                if target.mnemonic == 'movabs':
+                    jump_table_addr = target.op_find(X86_OP_IMM, 1).imm
+                    break
+
             for j in range(jump_table_len + 1) :
                 slot_address = jump_table_addr + j*8
-                insns = disassembler.disasm(section.data()[slot_address - offset:], slot_address)
+                insns = disassembler.disasm(section.data()[slot_address - base:], slot_address)
+                func_body = None
                 for k in insns:
+                    func_body = k
                     break
-                jump_table_targets.append(k.op_find(X86_OP_IMM, 1).imm)
+                jump_table_targets.append(func_body.op_find(X86_OP_IMM, 1).imm)
             indirects.append([call.address, jump_table_targets])
     return indirects
 
@@ -61,15 +64,15 @@ def main():
     if not section:
         print("[X] Can't find text section in binary!")
         exit()
-    offset = elf._get_section_header(elf._section_name_map.get('.text', None))['sh_offset']
+    base = section.header['sh_addr']
     disassembler = Cs(CS_ARCH_X86, CS_MODE_64)
     disassembler.detail = True
-    _assembly = disassembler.disasm(section.data(), offset)
+    _assembly = disassembler.disasm(section.data(), base)
     assembly = []
     for i in _assembly:
         assembly.append(i)
 
-    indirects = indirect_list(assembly, disassembler, section, offset)
+    indirects = indirect_list(assembly, disassembler, section, base)
     print_list(indirects)
     
 
