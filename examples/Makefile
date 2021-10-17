@@ -5,3 +5,6 @@ CFLAGS := -g -pie
 all:
 	$(CC) $(CFLAGS) $(CFI_FLAGS) main.c -o main.o
 	objdump -d main.o > main.S
+
+clean:
+	rm *.o *.S
