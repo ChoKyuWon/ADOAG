@@ -3,7 +3,6 @@ import os
 import archinfo
 from capstone import *
 from capstone.x86 import *
-import pyvex
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
@@ -74,10 +73,10 @@ def main():
     for i in _assembly:
         assembly.append(i)
 
-    # indirects = indirect_list(assembly, disassembler, section, base)
-    # print_list(indirects)
-    irsb = pyvex.lift(section.data(), base, archinfo.ArchAMD64())
-    irsb.next.next.pp()
+    indirects = indirect_list(assembly, disassembler, section, base)
+    print_list(indirects)
+    # irsb = pyvex.lift(section.data(), base, archinfo.ArchAMD64())
+    # irsb.next.next.pp()
 
 # this is the IR Expression of the jump target of the unconditional exit at the end of the basic block
     #print(irsb.next)
