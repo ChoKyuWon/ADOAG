@@ -1,0 +1,5 @@
+digraph "CFG for 'target' function" {
+	label="CFG for 'target' function";
+
+	Node0x1cf3710 [shape=record,label="{%1:\l  %2 = alloca i32, align 4\l  store i32 %0, i32* %2, align 4\l  call void @llvm.dbg.declare(metadata i32* %2, metadata !27, metadata\l... !DIExpression()), !dbg !28\l  %3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x\l... i8]* @.str, i64 0, i64 0)), !dbg !29\l  ret void, !dbg !30\l}"];
+}

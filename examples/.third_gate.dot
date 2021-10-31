@@ -1,0 +1,12 @@
+digraph "CFG for 'third_gate' function" {
+	label="CFG for 'third_gate' function";
+
+	Node0x1cfc730 [shape=record,label="{%1:\l  %2 = alloca i32, align 4\l  store i32 %0, i32* %2, align 4\l  call void @llvm.dbg.declare(metadata i32* %2, metadata !27, metadata\l... !DIExpression()), !dbg !28\l  %3 = load i32, i32* %2, align 4, !dbg !29\l  %4 = icmp eq i32 %3, 0, !dbg !31\l  br i1 %4, label %5, label %7, !dbg !32\l|{<s0>T|<s1>F}}"];
+	Node0x1cfc730:s0 -> Node0x1cfd060;
+	Node0x1cfc730:s1 -> Node0x1cfd0f0;
+	Node0x1cfd060 [shape=record,label="{%5:\l5:                                                \l  %6 = load i32, i32* %2, align 4, !dbg !33\l  call void @target(i32 %6), !dbg !34\l  br label %8, !dbg !34\l}"];
+	Node0x1cfd060 -> Node0x1cfd660;
+	Node0x1cfd0f0 [shape=record,label="{%7:\l7:                                                \l  br label %8, !dbg !35\l}"];
+	Node0x1cfd0f0 -> Node0x1cfd660;
+	Node0x1cfd660 [shape=record,label="{%8:\l8:                                                \l  ret void, !dbg !36\l}"];
+}

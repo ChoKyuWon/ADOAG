@@ -1,0 +1,5 @@
+digraph "CFG for 'init_table_on_runtime' function" {
+	label="CFG for 'init_table_on_runtime' function";
+
+	Node0x1d04200 [shape=record,label="{%0:\l  store void (i32)* @third_gate, void (i32)** getelementptr inbounds ([16 x\l... void (i32)*], [16 x void (i32)*]* @un_init_func_table, i64 0, i64 0), align\l... 16, !dbg !29\l  ret i32 0, !dbg !30\l}"];
+}

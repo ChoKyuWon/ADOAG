@@ -1,0 +1,5 @@
+digraph "CFG for 'main' function" {
+	label="CFG for 'main' function";
+
+	Node0x1d04b50 [shape=record,label="{%0:\l  %1 = alloca i32, align 4\l  store i32 0, i32* %1, align 4\l  %2 = call i32 @init_table_on_runtime(), !dbg !29\l  call void @second_gate_dup(i32 0, i32 0), !dbg !30\l  %3 = call i32 @vuln(), !dbg !31\l  ret i32 %3, !dbg !32\l}"];
+}
