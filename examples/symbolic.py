@@ -1,10 +1,13 @@
 import angr
 import claripy
 
-FLAG_LEN = 15
 STDIN_FD = 0
 
-base_addr = 0x100000 # To match addresses to Ghidra
+base_addr = 0x400000 # To match addresses to Ghidra
+
+# iCFG will give the path to target
+# vuln, first_gate, second_gate, third_gate, target
+path = [0x401310, 0x401448, 0x401430, 0x401450, 0x4011e0]
 
 proj = angr.Project("./main.o", main_opts={'base_addr': base_addr}) 
 
@@ -12,16 +15,11 @@ obj = proj.loader.main_object
 main = proj.loader.find_symbol('main').rebased_addr
 
 state = proj.factory.call_state(main)
-
 simgr = proj.factory.simulation_manager(state)
-find_addr  = proj.loader.find_symbol('target').rebased_addr  # SUCCESS
-avoid_addr = proj.loader.find_symbol('origin_flow').rebased_addr # FAILURE
-simgr.explore(find=find_addr, avoid=avoid_addr)
 
-if (len(simgr.found) > 0):
-    for found in simgr.found:
-        # for i in range(15):
-        #     c = found.posix.stdin.content[0][0].get_bytes(i, 1)
-        #     found.solver.add(c >= ord('!'))
-        #     found.solver.add(c <= ord('~'))
-        print(found.posix.dumps(STDIN_FD))
+for checkpoint in path:
+    simgr.explore(find=checkpoint)
+    if len(simgr.found) > 0 and checkpoint != path[-1]:
+        simgr = proj.factory.simulation_manager(simgr.found[0])
+
+print(simgr.found[0].posix.dumps(STDIN_FD))
