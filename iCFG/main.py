@@ -7,8 +7,14 @@ from capstone.x86 import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 
+import angr
+import angr.analyses.cfg.indirect_jump_resolvers.resolver as resolver
+import networkx
+from angrutils import *
+
+
 def indirect_list(assembly, disassembler, section, base):
-    indirects= []
+    indirects= {}
     for index, insn in enumerate(assembly):
         if insn.mnemonic == 'ud2':
             call = None
@@ -45,17 +51,18 @@ def indirect_list(assembly, disassembler, section, base):
                     func_body = k
                     break
                 jump_table_targets.append(func_body.op_find(X86_OP_IMM, 1).imm)
-            indirects.append([call.address, jump_table_targets])
+            # indirects.append({call.address: jump_table_targets})
+            indirects[call.address] = jump_table_targets
     return indirects
 
 def print_list(_list):
-    for i in _list:
-        print(hex(i[0]), '-> ', end="")
-        for j in i[1]:
+    for i in _list.keys():
+        print(hex(i), '-> ', end="")
+        for j in _list[i]:
             print(hex(j), end=", ")
         print()
-def main():
 
+def main():
     binary_path = os.path.dirname(os.path.abspath(__file__)) + "/../examples/main.o"
     if len(sys.argv) > 1:
         binary_path = sys.argv[1]
@@ -75,6 +82,42 @@ def main():
 
     indirects = indirect_list(assembly, disassembler, section, base)
     print_list(indirects)
+    print(indirects)
+    
+    proj = angr.Project(binary_path, load_options={'auto_load_libs':False})
+    p = proj
+    main = proj.loader.main_object.get_symbol("main")
+    vuln = proj.loader.main_object.get_symbol("vuln")
+    target = proj.loader.main_object.get_symbol("target")
+    start_state = proj.factory.blank_state(addr=main.rebased_addr)
+    # cfg = proj.analyses.CFGEmulated(fail_fast=True, starts=[main.rebased_addr], initial_state=start_state, enable_symbolic_back_traversal=True)
+
+    
+    indirect_reslover = IFCCReslover(proj, indirects)
+    cfg = proj.analyses.CFGFast(
+        function_starts=[main.rebased_addr], 
+        indirect_jump_resolvers = tuple(
+		angr.analyses.cfg.indirect_jump_resolvers.default_resolvers.default_indirect_jump_resolvers(
+			proj.loader.main_object,
+			proj
+		)) + (indirect_reslover,)
+    )
+
+    entry_node = cfg.get_any_node(p.entry)
+    vuln_node = cfg.get_any_node(vuln.rebased_addr)
+    target_node = cfg.get_any_node(target.rebased_addr)
+
+    # This is our goal!
+    paths = networkx.all_simple_paths(cfg.graph, vuln_node, target_node)
+
+    # paths = networkx.all_simple_paths(cfg.graph, entry_node, vuln_node)
+    for path in paths:
+        for node in path:
+            print(hex(node.addr))
+        print()
+
+    # For print CFG as png
+    plot_cfg(cfg, "ais3_cfg", asminst=True, remove_imports=True, remove_path_terminator=True)  
     # irsb = pyvex.lift(section.data(), base, archinfo.ArchAMD64())
     # irsb.next.next.pp()
 
@@ -83,4 +126,12 @@ def main():
     
 
 if __name__ == "__main__":
+    if __package__ is None:
+        import sys
+        from os import path
+        print(path.dirname( path.dirname( path.abspath(__file__) ) ))
+        sys.path.append(path.dirname( path.dirname( path.abspath(__file__) ) ))
+        from cfg import IFCCReslover
+    else:
+        from ..iCFG.cfg import IFCCReslover
     main()
