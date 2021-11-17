@@ -46,7 +46,9 @@ proj = angr.Project(TARGET_BINARY, main_opts={'base_addr': base_addr}, concrete_
 entry_state = proj.factory.entry_state()
 
 entry_state.options.add(angr.options.SYMBION_SYNC_CLE)
-entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)   
+entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
+
+un_init_func_table_addr = 0x404050
 
 simgr = proj.factory.simulation_manager(entry_state)
 
@@ -54,21 +56,25 @@ simgr.use_technique(angr.exploration_techniques.Symbion(find=[vuln]))
 
 exploration = simgr.run()
 vuln_state = None
-if len(exploration_techniques.stashes['found']) > 0:
+if len(exploration.stashes['found']) > 0:
     vuln_state = exploration.stashes['found'][0]
 
 if vuln_state == None:
     print("Something's wrong, I can feel it")
     sys.exit(0)
 
+un_init_func_table_val = int.from_bytes(avatar_gdb.read_memory(un_init_func_table_addr, 8), "little")
+un_init_func_table = claripy.BVV(un_init_func_table_val, 64)
+vuln_state.memory.store(un_init_func_table_addr, un_init_func_table)
 
 #symbolic execution
 simgr = proj.factory.simulation_manager(vuln_state)
 
-
 for checkpoint in path:
     simgr.explore(find=checkpoint)
     if len(simgr.found) > 0 and checkpoint != path[-1]:
+        # just checking whether the address of third gate is in un_init_func_table
+        print(simgr.found[0].memory.load(un_init_func_table_addr, 8))
         simgr = proj.factory.simulation_manager(simgr.found[0])
         print(hex(checkpoint), "Found! move to next checkpoint.")
 
