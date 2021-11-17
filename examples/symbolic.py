@@ -64,7 +64,7 @@ if vuln_state == None:
     sys.exit(0)
 
 un_init_func_table_val = int.from_bytes(avatar_gdb.read_memory(un_init_func_table_addr, 8), "little")
-un_init_func_table = claripy.BVV(un_init_func_table_val, 64)
+un_init_func_table = claripy.BVV(un_init_func_table_val, 64).reversed
 vuln_state.memory.store(un_init_func_table_addr, un_init_func_table)
 
 #symbolic execution
@@ -78,5 +78,7 @@ for checkpoint in path:
         simgr = proj.factory.simulation_manager(simgr.found[0])
         print(hex(checkpoint), "Found! move to next checkpoint.")
 
-print(simgr.found[0].posix.dumps(STDIN_FD))
+if len(simgr.found) > 0:
+    print(simgr.found[0].posix.dumps(STDIN_FD))
+
 # b'00000000000004199496000000000000041994720000000000'
