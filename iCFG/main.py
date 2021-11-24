@@ -22,8 +22,18 @@ def main():
     target = proj.loader.main_object.get_symbol("target")
     
     indirect_reslover = IFCCReslover(proj, indirects.indirects)
-    cfg = proj.analyses.CFGFast(
-        function_starts=[main.rebased_addr], 
+    # cfg = proj.analyses.CFGFast(
+    #     function_starts=[main.rebased_addr], 
+    #     indirect_jump_resolvers = tuple(
+	# 	angr.analyses.cfg.indirect_jump_resolvers.default_resolvers.default_indirect_jump_resolvers(
+	# 		proj.loader.main_object,
+	# 		proj
+	# 	)) + (indirect_reslover,)
+    # )
+    cfg = proj.analyses.CFGEmulated(
+        keep_state=True,
+        state_add_options=angr.sim_options.refs, 
+        context_sensitivity_level=2,
         indirect_jump_resolvers = tuple(
 		angr.analyses.cfg.indirect_jump_resolvers.default_resolvers.default_indirect_jump_resolvers(
 			proj.loader.main_object,
@@ -34,18 +44,21 @@ def main():
     src_node = cfg.model.get_any_node(vuln.rebased_addr)
     dst_node = cfg.model.get_any_node(target.rebased_addr)
     # entry_node = cfg.get_any_node(proj.entry)
-
+    print("Now we got CFG!")
+    # For print CFG as png
+    # plot_cfg(cfg, "ais3_cfg", asminst=True, remove_imports=True, remove_path_terminator=True)  
+    # ddg = proj.analyses.DDG(cfg=cfg)
+    # plot_ddg_stmt(ddg.graph, "ddg_stmt", project=proj)
     # This is our goal!
     paths = networkx.all_simple_paths(cfg.graph, src_node, dst_node)
 
     # paths = networkx.all_simple_paths(cfg.graph, entry_node, vuln_node)
+    print(hex(indirects.init_base), hex(indirects.end))
     for path in paths:
         for node in path:
-            print(hex(node.addr))
+            if (node.addr > indirects.init_base) and (node.addr < indirects.end):
+                print(hex(node.addr))
         print()
-
-    # For print CFG as png
-    # plot_cfg(cfg, "ais3_cfg", asminst=True, remove_imports=True, remove_path_terminator=True)  
     
 
 if __name__ == "__main__":

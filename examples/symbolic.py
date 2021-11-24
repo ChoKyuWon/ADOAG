@@ -33,6 +33,45 @@ path = [
     0x4012f1,
     0x4011e0
 ]
+
+# Not-working example
+# path = [
+# 0x401310,
+# 0x40134b,
+# 0x401360,
+# 0x40137d,
+# 0x401399,
+# 0x4013c3,
+# 0x401240,
+# 0x40125e,
+# 0x401297,
+# 0x4012c5,
+# 0x401190,
+# 0x4011a9,
+# 0x4011c6,
+# 0x4012e0,
+# 0x4012f1,
+# 0x4011e0,
+# ]
+
+# path = [
+# 0x401310,
+# 0x40134b,
+# 0x401360,
+# 0x40137d,
+# 0x401399,
+# 0x4013c3,
+# 0x401240,
+# 0x40125e,
+# 0x401264,
+# 0x40128e,
+# 0x401190,
+# 0x4011a9,
+# 0x4011c6,
+# 0x4012e0,
+# 0x4012f1,
+# 0x4011e0,
+# ]
 vuln = path.pop(0)
 
 # concrete execution
@@ -80,5 +119,6 @@ for checkpoint in path:
 
 if len(simgr.found) > 0:
     print(simgr.found[0].posix.dumps(STDIN_FD))
-
+else:
+    print("Not found")
 # b'00000000000004199496000000000000041994720000000000'

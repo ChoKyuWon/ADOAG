@@ -19,7 +19,12 @@ class Indirects():
         if not self.section:
             print("[X] Can't find text section in binary!")
             return
+        
         self.base = self.section.header['sh_addr']
+        self.init_base = elf.get_section_by_name(".init").header['sh_addr']
+        fin = elf.get_section_by_name(".fini")
+        self.end = fin.header['sh_addr'] + fin.data_size
+
         self.disassembler = Cs(CS_ARCH_X86, CS_MODE_64)
         self.disassembler.detail = True
         _assembly = self.disassembler.disasm(self.section.data(), self.base)
