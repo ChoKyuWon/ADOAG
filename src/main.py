@@ -6,6 +6,7 @@ import sys
 import os
 import networkx
 import signal
+import copy
 from angr_targets import AvatarGDBConcreteTarget
 
 if __name__ == "__main__" and __package__ is None:
@@ -18,7 +19,7 @@ if __name__ == "__main__" and __package__ is None:
 from ..iCFG.find_indirects import Indirects
 from ..iCFG.jump_resolver import IFCCReslover
 
-def handler(signum, frame):
+def _handler(signum, frame):
     raise Exception("end of time")
 
 STDIN_FD = 0
@@ -114,16 +115,23 @@ if vuln_state == None:
 # vuln_state.memory.store(un_init_func_table_addr, un_init_func_table)
 
 #symbolic execution
-signal.signal(signal.SIGALRM, handler)
+signal.signal(signal.SIGALRM, _handler)
 simgr = proj.factory.simulation_manager(vuln_state)
 
 for checkpoint in path:
+    simgr_bak = simgr.copy(deep=True)
     signal.alarm(10)
     try:
         simgr.explore(find=checkpoint)
     except Exception:
         print("Timeout!!!")
-        exit(0)
+        unresolved_addr = 0x404050 #TODO
+        unresolved_variable = claripy.BVV(avatar_gdb.read_memory(unresolved_addr, 8), 64) #TODO
+        simgr_bak.active[-1].memory.store(un_init_func_table_addr, unresolved_variable)
+        simgr = simgr_bak
+        print("Alright, let's try again with", hex(unresolved_addr), simgr.active[-1].memory.load(un_init_func_table_addr, 8))
+        continue
+
     if len(simgr.found) > 0 and checkpoint != path[-1]:
         # just checking whether the address of third gate is in un_init_func_table
         print(simgr.found[0].memory.load(un_init_func_table_addr, 8))
