@@ -3,11 +3,7 @@ import claripy
 import subprocess
 import avatar2
 import sys
-import os
 from angr_targets import AvatarGDBConcreteTarget
-
-from ..iCFG.find_indirects import Indirects
-from ..iCFG.jump_resolver import IFCCReslover
 
 STDIN_FD = 0
 GDB_SERVER_IP = "localhost"
@@ -16,59 +12,6 @@ TARGET_BINARY = "./main.o"
 
 base_addr = 0x400000 # To match addresses to Ghidra
 
-subprocess.Popen("gdbserver %s:%s %s" % (GDB_SERVER_IP,GDB_SERVER_PORT,TARGET_BINARY),
-                  stdout=subprocess.PIPE,
-                  stderr=subprocess.PIPE, shell=True)
-
-avatar_gdb = AvatarGDBConcreteTarget(avatar2.archs.x86.X86_64, GDB_SERVER_IP, GDB_SERVER_PORT)
-proj = angr.Project(TARGET_BINARY, main_opts={'base_addr': base_addr}, concrete_target=avatar_gdb, use_sim_procedures=True) 
-
-binary_path = os.path.dirname(os.path.abspath(__file__)) + "/../examples/main.o"
-if len(sys.argv) > 1:
-    binary_path = sys.argv[1]
-bin = open(binary_path, 'rb')
-
-indirects = Indirects(bin)
-indirects.indirect_list()
-
-indirect_reslover = IFCCReslover(proj, indirects.indirects)
-# cfg = proj.analyses.CFGFast(
-#     function_starts=[main.rebased_addr], 
-#     indirect_jump_resolvers = tuple(
-# 	angr.analyses.cfg.indirect_jump_resolvers.default_resolvers.default_indirect_jump_resolvers(
-# 		proj.loader.main_object,
-# 		proj
-# 	)) + (indirect_reslover,)
-# )
-cfg = proj.analyses.CFGEmulated(
-    keep_state=True,
-    state_add_options=angr.sim_options.refs, 
-    context_sensitivity_level=2,
-    indirect_jump_resolvers = tuple(
-    angr.analyses.cfg.indirect_jump_resolvers.default_resolvers.default_indirect_jump_resolvers(
-        proj.loader.main_object,
-        proj
-    )) + (indirect_reslover,)
-)
-
-src_node = cfg.model.get_any_node(vuln.rebased_addr)
-dst_node = cfg.model.get_any_node(target.rebased_addr)
-# entry_node = cfg.get_any_node(proj.entry)
-print("Now we got CFG!")
-# For print CFG as png
-# plot_cfg(cfg, "ais3_cfg", asminst=True, remove_imports=True, remove_path_terminator=True)  
-# ddg = proj.analyses.DDG(cfg=cfg)
-# plot_ddg_stmt(ddg.graph, "ddg_stmt", project=proj)
-# This is our goal!
-paths = networkx.all_simple_paths(cfg.graph, src_node, dst_node)
-
-# paths = networkx.all_simple_paths(cfg.graph, entry_node, vuln_node)
-print(hex(indirects.init_base), hex(indirects.end))
-for path in paths:
-    for node in path:
-        if (node.addr > indirects.init_base) and (node.addr < indirects.end):
-            print(hex(node.addr))
-    print()
 # iCFG will give the path to target
 # vuln, first_gate, second_gate, third_gate, target
 path = [
@@ -132,7 +75,12 @@ path = [
 vuln = path.pop(0)
 
 # concrete execution
+subprocess.Popen("gdbserver %s:%s %s" % (GDB_SERVER_IP,GDB_SERVER_PORT,TARGET_BINARY),
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE, shell=True)
 
+avatar_gdb = AvatarGDBConcreteTarget(avatar2.archs.x86.X86_64, GDB_SERVER_IP, GDB_SERVER_PORT)
+proj = angr.Project(TARGET_BINARY, main_opts={'base_addr': base_addr}, concrete_target=avatar_gdb, use_sim_procedures=True) 
 
 entry_state = proj.factory.entry_state()
 
