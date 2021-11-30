@@ -5,6 +5,7 @@ import avatar2
 import sys
 import os
 import networkx
+import signal
 from angr_targets import AvatarGDBConcreteTarget
 
 if __name__ == "__main__" and __package__ is None:
@@ -16,6 +17,9 @@ if __name__ == "__main__" and __package__ is None:
 
 from ..iCFG.find_indirects import Indirects
 from ..iCFG.jump_resolver import IFCCReslover
+
+def handler(signum, frame):
+    raise Exception("end of time")
 
 STDIN_FD = 0
 GDB_SERVER_IP = "localhost"
@@ -104,15 +108,22 @@ if vuln_state == None:
     print("Something's wrong, I can feel it")
     sys.exit(0)
 
-un_init_func_table_val = int.from_bytes(avatar_gdb.read_memory(un_init_func_table_addr, 8), "little")
-un_init_func_table = claripy.BVV(un_init_func_table_val, 64).reversed
-vuln_state.memory.store(un_init_func_table_addr, un_init_func_table)
+
+# un_init_func_table_val = int.from_bytes(avatar_gdb.read_memory(un_init_func_table_addr, 8), "little")
+# un_init_func_table = claripy.BVV(un_init_func_table_val, 64).reversed
+# vuln_state.memory.store(un_init_func_table_addr, un_init_func_table)
 
 #symbolic execution
+signal.signal(signal.SIGALRM, handler)
 simgr = proj.factory.simulation_manager(vuln_state)
 
 for checkpoint in path:
-    simgr.explore(find=checkpoint)
+    signal.alarm(10)
+    try:
+        simgr.explore(find=checkpoint)
+    except Exception:
+        print("Timeout!!!")
+        exit(0)
     if len(simgr.found) > 0 and checkpoint != path[-1]:
         # just checking whether the address of third gate is in un_init_func_table
         print(simgr.found[0].memory.load(un_init_func_table_addr, 8))
