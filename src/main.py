@@ -6,7 +6,6 @@ import sys
 import os
 import networkx
 import signal
-import copy
 from angr_targets import AvatarGDBConcreteTarget
 
 if __name__ == "__main__" and __package__ is None:
@@ -125,6 +124,46 @@ for checkpoint in path:
         simgr.explore(find=checkpoint)
     except Exception:
         print("Timeout!!!")
+        state = simgr_bak.active[-1]
+        node = cfg.model.get_any_node(state.addr)
+        from capstone import *
+        from capstone.x86 import *
+        disassembler = Cs(CS_ARCH_X86, CS_MODE_64)
+        disassembler.detail = True
+        block_offset = node.addr - indirects.base
+        assembly = disassembler.disasm(indirects.section.data()[block_offset:block_offset+node.size], indirects.base)
+        unresolved_addr = []
+        for insn in assembly:
+            print()
+            if "mov" in insn.mnemonic:
+                if insn.op_count(X86_OP_IMM) != 0:
+                    print(insn.op_find(X86_OP_IMM, 1).imm)
+                elif insn.op_count(X86_OP_MEM):
+                    print(insn.op_str.split(",")[1])
+                    # val = 0
+                    # i = insn.op_find(X86_OP_MEM, 1)
+                    # c = 0
+                    # base = 0
+                    # index = 0
+                    # disp = 0
+
+                    # if i.value.mem.base != 0:
+                    #     print("\t\t\toperands[%u].mem.base: REG = %s" \
+                    #         %(c, insn.reg_name(i.value.mem.base)))
+                    #     base = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.base)))
+                    # if i.value.mem.index != 0:
+                    #     print("\t\t\toperands[%u].mem.index: REG = %s" \
+                    #         %(c, insn.reg_name(i.value.mem.index)))
+                    #     index = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.index)))
+                    # if i.value.mem.disp != 0:
+                    #     print("\t\t\toperands[%u].mem.disp: 0x%x" \
+                    #         %(c, i.value.mem.disp))
+                    #     disp = i.value.mem.disp
+                    
+                    # res = disp + base + (index * val)
+                    print(hex(res))
+        
+        exit()
         unresolved_addr = 0x404050 #TODO
         unresolved_variable = claripy.BVV(avatar_gdb.read_memory(unresolved_addr, 8), 64) #TODO
         simgr_bak.active[-1].memory.store(un_init_func_table_addr, unresolved_variable)
