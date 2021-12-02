@@ -139,6 +139,7 @@ for checkpoint in path:
                 if insn.op_count(X86_OP_IMM) != 0:
                     print(insn.op_find(X86_OP_IMM, 1).imm)
                 elif insn.op_count(X86_OP_MEM):
+                    # e.g [rax*8 + 0x404050]
                     print(insn.op_str.split(",")[1])
                     # val = 0
                     # i = insn.op_find(X86_OP_MEM, 1)
