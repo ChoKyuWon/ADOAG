@@ -131,37 +131,48 @@ for checkpoint in path:
         disassembler = Cs(CS_ARCH_X86, CS_MODE_64)
         disassembler.detail = True
         block_offset = node.addr - indirects.base
-        assembly = disassembler.disasm(indirects.section.data()[block_offset:block_offset+node.size], indirects.base)
+        assembly = disassembler.disasm(indirects.section.data()[block_offset:block_offset+node.size], indirects.base + block_offset)
         unresolved_addr = []
         for insn in assembly:
             print()
             if "mov" in insn.mnemonic:
+                mov_sim = simgr_bak.copy(deep=True)
+                print(mov_sim.active)
+                print("Current addr:",hex(mov_sim.active[0].addr), "Mov addr:", hex(insn.address))
+                signal.alarm(10)
+                try:
+                    mov_sim.explore(find=insn.address)
+                    state = mov_sim.found[0]
+                except Exception:
+                    print("Can't reach MOV ins!")
+                    exit()
+                signal.alarm(0)
                 if insn.op_count(X86_OP_IMM) != 0:
                     print(insn.op_find(X86_OP_IMM, 1).imm)
                 elif insn.op_count(X86_OP_MEM):
                     # e.g [rax*8 + 0x404050]
                     print(insn.op_str.split(",")[1])
-                    # val = 0
-                    # i = insn.op_find(X86_OP_MEM, 1)
-                    # c = 0
-                    # base = 0
-                    # index = 0
-                    # disp = 0
+                    val = 0
+                    i = insn.op_find(X86_OP_MEM, 1)
+                    c = 0
+                    base = 0
+                    index = 0
+                    disp = 0
 
-                    # if i.value.mem.base != 0:
-                    #     print("\t\t\toperands[%u].mem.base: REG = %s" \
-                    #         %(c, insn.reg_name(i.value.mem.base)))
-                    #     base = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.base)))
-                    # if i.value.mem.index != 0:
-                    #     print("\t\t\toperands[%u].mem.index: REG = %s" \
-                    #         %(c, insn.reg_name(i.value.mem.index)))
-                    #     index = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.index)))
-                    # if i.value.mem.disp != 0:
-                    #     print("\t\t\toperands[%u].mem.disp: 0x%x" \
-                    #         %(c, i.value.mem.disp))
-                    #     disp = i.value.mem.disp
+                    if i.value.mem.base != 0:
+                        print("\t\t\toperands[%u].mem.base: REG = %s" \
+                            %(c, insn.reg_name(i.value.mem.base)))
+                        base = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.base)))
+                    if i.value.mem.index != 0:
+                        print("\t\t\toperands[%u].mem.index: REG = %s" \
+                            %(c, insn.reg_name(i.value.mem.index)))
+                        index = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.index)))
+                    if i.value.mem.disp != 0:
+                        print("\t\t\toperands[%u].mem.disp: 0x%x" \
+                            %(c, i.value.mem.disp))
+                        disp = i.value.mem.disp
                     
-                    # res = disp + base + (index * val)
+                    res = disp + base + (index * val)
                     print(hex(res))
         
         exit()
