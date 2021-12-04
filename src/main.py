@@ -108,7 +108,6 @@ if vuln_state == None:
     print("Something's wrong, I can feel it")
     sys.exit(0)
 
-
 # un_init_func_table_val = int.from_bytes(avatar_gdb.read_memory(un_init_func_table_addr, 8), "little")
 # un_init_func_table = claripy.BVV(un_init_func_table_val, 64).reversed
 # vuln_state.memory.store(un_init_func_table_addr, un_init_func_table)
@@ -151,40 +150,53 @@ for checkpoint in path:
                         print("Can't reach MOV ins!")
                         exit()
                     signal.alarm(0)
-                    # print("0x%x:\t%s\t%s" %(insn.address, insn.mnemonic, insn.op_str))
+                    print("0x%x:\t%s\t%s" %(insn.address, insn.mnemonic, insn.op_str))
                     if insn.op_count(X86_OP_IMM) != 0:
                         # print(insn.op_find(X86_OP_IMM, 1).imm)
                         pass
                     elif insn.op_count(X86_OP_MEM):
                         # e.g [rax*8 + 0x404050]
                         # print(insn.op_str.split(",")[1])
-                        val = 0
+                        scale = 0
                         i = insn.op_find(X86_OP_MEM, 1)
                         c = 0
                         base = 0
                         index = 0
                         disp = 0
+                        size = 8
+
+                        if "qword" in insn.op_str:
+                            size = 8
+                        elif "dword" in insn.op_str:
+                            size = 4
+                        elif "word" in insn.op_str:
+                            size = 2
+                        elif "byte" in insn.op_str:
+                            size = 1
 
                         if i.value.mem.base != 0:
                             base = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.base)))
                         if i.value.mem.index != 0:
                             index = state.solver.eval(state.regs.__getattr__(insn.reg_name(i.value.mem.index)))
-                        if i.value.mem.disp != 0:
-                            disp = i.value.mem.disp
-                        
-                        res = disp + base + (index * val)
+                        disp = i.value.mem.disp
+                        scale = i.value.mem.scale
+
+                        res = disp + base + (index * scale)
                         # print(hex(res))
 
                         # TODO
                         # maybe we have to check whether res is dereferencable address.
-                        unresolved_addr.append(res)
-            
+                        if state.solver.eval(state.memory.load(res, size)) == 0:
+                            unresolved_addr.append(res)
 
             #unresolved_addr = 0x404050 #TODO
             for addr in unresolved_addr:
                 for idx in range(MEMORY_LOAD_CHUNK):
-                    unresolved_variable = claripy.BVV(avatar_gdb.read_memory(addr + (attempt * 10 + idx) * 8, 8), 64)
-                    simgr_bak.active[-1].memory.store(addr + (attempt * 10 + idx) * 8, unresolved_variable)
+                    try:
+                        unresolved_variable = claripy.BVV(avatar_gdb.read_memory(addr + (attempt * MEMORY_LOAD_CHUNK + idx) * 8, 8), 64)
+                        simgr_bak.active[-1].memory.store(addr + (attempt * 10 + idx) * 8, unresolved_variable)
+                    except:
+                        pass
             simgr = simgr_bak
             # print("Alright, let's try again with", hex(unresolved_addr), simgr.active[-1].memory.load(addr + (attempt * 10 + idx) * 8, 8))
             attempt += 1
